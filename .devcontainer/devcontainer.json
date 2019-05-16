@@ -1,0 +1,18 @@
+// See https://aka.ms/vscode-remote/containers for the
+// documentation about the devcontainer.json format
+{
+  "name": "Dockerfile[jupyter]",
+  "context": "../docker",
+  "dockerFile": "../docker/Dockerfile",
+  "appPort": [
+    8889
+  ],
+  "extensions": [
+    "python"
+  ],
+  "runArgs": [
+    "-v=/Users/chi/work/GitHub/LearningToPaint:/notebooks/LearningToPaint",
+    "--ipc=host",
+    // "/var/run/docker.sock:/var/run/docker.sock"
+  ]
+}
