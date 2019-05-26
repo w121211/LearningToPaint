@@ -1,8 +1,15 @@
+.ipynb_checkpoints
+
 *.pyc
 *.py~
 
 data/
+model/
+train_log/
 *.pkl
 
 output/*
 log
+
+__pycache__/
+.DS_Store

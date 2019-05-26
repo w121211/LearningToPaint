@@ -5,6 +5,7 @@
   "context": "../docker",
   "dockerFile": "../docker/Dockerfile",
   "appPort": [
+    6006,
     8889
   ],
   "extensions": [

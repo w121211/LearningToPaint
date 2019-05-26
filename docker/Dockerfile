@@ -30,7 +30,7 @@ ENV CONDA_AUTO_UPDATE_CONDA=false
 RUN conda install -y ipython
 RUN pip install ninja yacs cython matplotlib jupyter \
     git+git://github.com/waspinator/pycococreator.git@0.2.0 \
-    tensorboardX opencv-python pillow scipy
+    tensorboardX opencv-python scipy
 
 # Install PyTorch 1.0 Nightly and OpenCV
 RUN conda install -y pytorch-nightly -c pytorch \

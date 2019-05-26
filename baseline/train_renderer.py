@@ -4,15 +4,21 @@ import numpy as np
 
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.tensorboard import TensorBoard
-from Renderer.model import FCN
-from Renderer.stroke_gen import *
-
-writer = TensorBoard("../train_log/")
 import torch.optim as optim
 
+from Renderer.model import FCN
+from Renderer.stroke_gen import draw_rect
+from utils.tensorboard import TensorBoard
+
+# writer = TensorBoard("../train_log/")
+writer = TensorBoard("./train_log/")
+
+# action dimension
+action_dim = 4
+draw_fn = draw_rect
+
 criterion = nn.MSELoss()
-net = FCN()
+net = FCN(num_input=action_dim)
 optimizer = optim.Adam(net.parameters(), lr=3e-6)
 batch_size = 64
 
@@ -26,6 +32,7 @@ def save_model():
     torch.save(net.state_dict(), "./renderer.pkl")
     if use_cuda:
         net.cuda()
+    print("saved model")
 
 
 def load_weights():
@@ -34,49 +41,61 @@ def load_weights():
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
     model_dict.update(pretrained_dict)
     net.load_state_dict(model_dict)
+    print("loaded pretrained weights")
 
 
 # load_weights()
+
 while step < 500000:
     net.train()
-    train_batch = []
-    ground_truth = []
-    for i in range(batch_size):
-        f = np.random.uniform(0, 1, 10)
-        train_batch.append(f)
-        ground_truth.append(draw(f))
+    x = []
+    gt = []
 
-    train_batch = torch.tensor(train_batch).float()
-    ground_truth = torch.tensor(ground_truth).float()
+    # generate ground truth data
+    for i in range(batch_size):
+        # _x = np.random.uniform(0, 1, action_dim)
+        _x = np.array([0, 0, 0.5, 0.5])
+        x.append(_x)
+        gt.append(draw_fn(_x))
+
+    x = torch.tensor(x).float()
+    gt = torch.tensor(gt).float()
     if use_cuda:
         net = net.cuda()
-        train_batch = train_batch.cuda()
-        ground_truth = ground_truth.cuda()
-    gen = net(train_batch)
+        x = x.cuda()
+        gt = gt.cuda()
+
+    y = net(x)
+    # print(gt)
+    # print(y)
     optimizer.zero_grad()
-    loss = criterion(gen, ground_truth)
+    loss = criterion(y, gt)
     loss.backward()
     optimizer.step()
     print(step, loss.item())
+
     if step < 200000:
         lr = 1e-4
     elif step < 400000:
         lr = 1e-5
     else:
         lr = 1e-6
+
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr
     writer.add_scalar("train/loss", loss.item(), step)
+
     if step % 100 == 0:
         net.eval()
-        gen = net(train_batch)
-        loss = criterion(gen, ground_truth)
+        y = net(x)
+        loss = criterion(y, gt)
         writer.add_scalar("val/loss", loss.item(), step)
         for i in range(32):
-            G = gen[i].cpu().data.numpy()
-            GT = ground_truth[i].cpu().data.numpy()
+            G = y[i].cpu().data.numpy()
+            GT = gt[i].cpu().data.numpy()
             writer.add_image("train/gen{}.png".format(i), G, step)
             writer.add_image("train/ground_truth{}.png".format(i), GT, step)
+
     if step % 1000 == 0:
         save_model()
     step += 1
