@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw
 
+
 def normal(x, width):
     return (int)(x * (width - 1) + 0.5)
 
@@ -40,15 +41,16 @@ def draw_rect(f, width=128):
     im = Image.new("F", (width, width))
     draw = ImageDraw.Draw(im)
     draw.rectangle([x0, y0, x1, y1], fill=1)
-    return np.array(im)
+    im = np.array(im)  # shape: (width, width)
+    return im
 
 
 def rand_draw(draw_fn=draw_rect, n_strokes=3, width=128):
     canvas = np.zeros((width, width, 3), dtype=int)
     for i in range(n_strokes):
         x = np.random.rand(4)
-        stroke = draw_fn(x, width)
-        stroke = np.repeat(stroke, 3).reshape(width, width, 3).astype(int)
-        color = np.random.randint(255, size=(3))
-        canvas = canvas * (1 - stroke) + stroke * color
-    return canvas
+        stroke = draw_fn(x, width)  # (w, w)
+        stroke = np.expand_dims(stroke, axis=2)  # (w, w, 1)
+        color = np.random.randint(255, size=(3))  # (3)
+        canvas = canvas * (1 - stroke) + stroke * color  # (w, h, 3)
+    return canvas.astype(int)

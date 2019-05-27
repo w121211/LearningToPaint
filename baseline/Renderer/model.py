@@ -32,4 +32,5 @@ class FCN(nn.Module):
         x = F.relu(self.conv5(x))
         x = self.pixel_shuffle(self.conv6(x))
         x = torch.sigmoid(x)
-        return 1 - x.view(-1, 128, 128)
+        # return 1 - x.view(-1, 128, 128)
+        return x.view(-1, 128, 128)

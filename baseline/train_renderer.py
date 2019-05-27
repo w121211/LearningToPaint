@@ -20,7 +20,7 @@ draw_fn = draw_rect
 criterion = nn.MSELoss()
 net = FCN(num_input=action_dim)
 optimizer = optim.Adam(net.parameters(), lr=3e-6)
-batch_size = 64
+batch_size = 4096
 
 use_cuda = torch.cuda.is_available()
 step = 0
@@ -46,7 +46,8 @@ def load_weights():
 
 # load_weights()
 
-while step < 500000:
+# while step < 500000:
+while step < 10000:
     net.train()
     x = []
     gt = []
