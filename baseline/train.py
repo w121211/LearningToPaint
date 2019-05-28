@@ -14,7 +14,7 @@ os.system("ln -sf ../train_log/{} ./log".format(exp))
 os.system("mkdir ./model")
 
 
-def train(agent, env, evaluate):
+def train(agent, env, evaluate, warmup):
     train_times = args.train_times
     env_batch = args.env_batch
     validate_interval = args.validate_interval
@@ -30,7 +30,6 @@ def train(agent, env, evaluate):
     noise_factor = args.noise_factor
 
     while step <= train_times:
-        print(step)
         step += 1
         episode_steps += 1
 
@@ -43,7 +42,7 @@ def train(agent, env, evaluate):
         agent.observe(reward, observation, done, step)
 
         if episode_steps >= max_step and max_step:
-            if step > args.warmup:
+            if step > warmup:
                 # [optional] evaluate
                 if (
                     episode > 0
@@ -67,7 +66,7 @@ def train(agent, env, evaluate):
             tot_Q = 0.0
             tot_value_loss = 0.0
 
-            if step > args.warmup:
+            if step > warmup:
                 if step < 10000 * max_step:
                     lr = (3e-4, 1e-3)
                 elif step < 20000 * max_step:
@@ -188,4 +187,4 @@ if __name__ == "__main__":
     print(
         "observation_space", fenv.observation_space, "action_space", fenv.action_space
     )
-    train(agent, fenv, evaluate)
+    train(agent, fenv, evaluate, args.warmup)

@@ -27,7 +27,7 @@ action_dim = 4
 n_frames_per_step = 1
 
 Decoder = FCN(num_input=action_dim)
-Decoder.load_state_dict(torch.load("./renderer.pkl"))
+Decoder.load_state_dict(torch.load("./renderer.pt"))
 print("Renderer model loaded.")
 
 def decode(x, canvas, width=128):

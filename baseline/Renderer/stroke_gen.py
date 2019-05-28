@@ -45,12 +45,18 @@ def draw_rect(f, width=128):
     return im
 
 
-def rand_draw(draw_fn=draw_rect, n_strokes=3, width=128):
+def rand_draw(draw_fn=draw_rect, n_strokes=1, width=128, action_dim=4):
     canvas = np.zeros((width, width, 3), dtype=int)
+    x = []
+
     for i in range(n_strokes):
-        x = np.random.rand(4)
-        stroke = draw_fn(x, width)  # (w, w)
-        stroke = np.expand_dims(stroke, axis=2)  # (w, w, 1)
+        _x = np.random.rand(action_dim)
         color = np.random.randint(255, size=(3))  # (3)
+        x.append(np.concatenate((_x, color)))
+
+        stroke = draw_fn(_x, width)  # (w, w)
+        stroke = np.expand_dims(stroke, axis=2)  # (w, w, 1)
         canvas = canvas * (1 - stroke) + stroke * color  # (w, h, 3)
-    return canvas.astype(int)
+
+    x = np.stack(x)  # (n_strokes, action_dim+3)
+    return canvas.astype(int), x

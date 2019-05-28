@@ -18,12 +18,8 @@ writer = TensorBoard("./train_log/")
 action_dim = 4
 draw_fn = draw_rect
 
-criterion = nn.MSELoss()
-net = FCN(num_input=action_dim)
-use_cuda = torch.cuda.is_available()
 
-
-def save_model(path="./renderer.pt"):
+def save_model(net, path, use_cuda):
     if use_cuda:
         net.cpu()
     torch.save(net.state_dict(), path)
@@ -32,7 +28,7 @@ def save_model(path="./renderer.pt"):
     print("saved model")
 
 
-def load_weights(path="./renderer.pt"):
+def load_weights(net, path="./renderer.pt"):
     pretrained_dict = torch.load()
     model_dict = net.state_dict()
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
@@ -42,13 +38,16 @@ def load_weights(path="./renderer.pt"):
 
 
 def train(resume, output):
+    use_cuda = torch.cuda.is_available()
+    net = FCN(num_input=action_dim)
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(net.parameters(), lr=3e-6)
     batch_size = 64
 
     step = 0
 
     if resume is not None:
-        load_weights(resume)
+        load_weights(net, resume)
 
     while step < 500000:
         net.train()
@@ -76,7 +75,8 @@ def train(resume, output):
         loss = criterion(y, gt)
         loss.backward()
         optimizer.step()
-        print(step, loss.item())
+        if step % 100 == 0:
+            print(step, loss.item())
 
         if step < 200000:
             lr = 1e-4
@@ -89,7 +89,7 @@ def train(resume, output):
             param_group["lr"] = lr
         writer.add_scalar("train/loss", loss.item(), step)
 
-        if step % 100 == 0:
+        if step % 1000 == 0:
             net.eval()
             y = net(x)
             loss = criterion(y, gt)
@@ -101,7 +101,7 @@ def train(resume, output):
                 writer.add_image("train/ground_truth{}.png".format(i), GT, step)
 
         if step % 1000 == 0:
-            save_model(output)
+            save_model(net, output, use_cuda)
         step += 1
 
 

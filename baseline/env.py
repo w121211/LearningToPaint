@@ -79,9 +79,13 @@ class Paint:
         self.gt = torch.zeros([self.batch_size, 3, width, width], dtype=torch.uint8).to(
             device
         )
+        x = []  # actions for ground truth
         for i in range(self.batch_size):
-            _gt = np.transpose(rand_draw_fn(), (2, 0, 1))
+            _gt, _x = rand_draw_fn()
+            _gt = np.transpose(_gt, (2, 0, 1))
             self.gt[i] = torch.from_numpy(_gt)
+            x.append(_x)
+        x = torch.from_numpy(np.stack(x)).float()
 
         self.tot_reward = ((self.gt.float() / 255) ** 2).mean(1).mean(1).mean(1)
         self.stepnum = 0
@@ -89,7 +93,7 @@ class Paint:
             [self.batch_size, 3, width, width], dtype=torch.uint8
         ).to(device)
         self.lastdis = self.ini_dis = self.cal_dis()
-        return self.observation()
+        return self.observation(), x
 
     def reset(self, test=False, begin_num=False):
         self.test = test

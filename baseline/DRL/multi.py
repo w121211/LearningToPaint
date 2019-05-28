@@ -5,6 +5,7 @@ from env import Paint
 from utils.util import to_numpy
 from DRL.ddpg import decode
 
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -19,6 +20,15 @@ class fastenv:
         self.writer = writer
         self.test = False
         self.log = 0
+
+    def save_image_with_gen(self, log, step):
+        for i in range(1):
+            canvas = to_numpy(self.env.canvas[i].permute(1, 2, 0))
+            self.writer.add_image(
+                "images/%d-%d-%d_canvas.png" % (log, i, step), canvas, log
+            )
+        gt = to_numpy(self.env.gt[i].permute(1, 2, 0))
+        self.writer.add_image("images/%d-%d_target.png" % (log, i), gt, log)
 
     def save_image(self, log, step):
         for i in range(self.env_batch):
