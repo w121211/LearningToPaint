@@ -22,13 +22,8 @@ coord = coord.to(device)
 
 criterion = nn.MSELoss()
 
-action_dim = 4
-# n_frames_per_step = 5
-n_frames_per_step = 1
-
-Decoder = FCN(num_input=action_dim)
-Decoder.load_state_dict(torch.load("./renderer.pt"))
-print("Renderer model loaded.")
+Decoder = FCN()
+Decoder.load_state_dict(torch.load('../renderer.pkl'))
 
 def decode(x, canvas, width=128):
     # x: (B * 5) * (10 + 3), 5: 5 steps, 10+3: action output
@@ -95,11 +90,10 @@ class DDPG(object):
         # Tensorboard
         self.writer = writer
         self.log = 0
-
-        self.state = [None] * self.env_batch  # Most recent state
-        self.action = [None] * self.env_batch  # Most recent action
-        self.cuda = torch.cuda.is_available()
-        self.choose_device()
+        
+        self.state = [None] * self.env_batch # Most recent state
+        self.action = [None] * self.env_batch # Most recent action
+        self.choose_device()        
 
     def play(self, state, target=False):
         state = torch.cat(

@@ -72,7 +72,7 @@ def train(agent, env, evaluate, warmup):
                 elif step < 20000 * max_step:
                     lr = (1e-4, 3e-4)
                 else:
-                    lr = (3e-5, 1e-5)
+                    lr = (3e-5, 1e-4)
                 for i in range(episode_train_times):
                     Q, value_loss = agent.update_policy(lr)
                     tot_Q += Q.data.cpu().numpy()
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
     random.seed(args.seed)
-    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.deterministic = False
     torch.backends.cudnn.benchmark = True
     from DRL.ddpg import DDPG
     from DRL.multi import fastenv

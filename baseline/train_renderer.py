@@ -22,14 +22,14 @@ draw_fn = draw_rect
 def save_model(net, path, use_cuda):
     if use_cuda:
         net.cpu()
-    torch.save(net.state_dict(), path)
+    torch.save(net.state_dict(), "../renderer.pkl")
     if use_cuda:
         net.cuda()
     print("saved model")
 
 
-def load_weights(net, path="./renderer.pt"):
-    pretrained_dict = torch.load()
+def load_weights():
+    pretrained_dict = torch.load("../renderer.pkl")
     model_dict = net.state_dict()
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
     model_dict.update(pretrained_dict)
@@ -37,12 +37,15 @@ def load_weights(net, path="./renderer.pt"):
     print("loaded pretrained weights")
 
 
-def train(resume, output):
-    use_cuda = torch.cuda.is_available()
-    net = FCN(num_input=action_dim)
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(net.parameters(), lr=3e-6)
-    batch_size = 64
+load_weights()
+while step < 500000:
+    net.train()
+    train_batch = []
+    ground_truth = []
+    for i in range(batch_size):
+        f = np.random.uniform(0, 1, 10)
+        train_batch.append(f)
+        ground_truth.append(draw(f))
 
     step = 0
 

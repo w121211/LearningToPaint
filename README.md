@@ -28,7 +28,7 @@ $ cd LearningToPaint
 * [tensorboardX](https://github.com/lanpa/tensorboard-pytorch/tree/master/tensorboardX)
 * [opencv-python](https://pypi.org/project/opencv-python/) 3.4.0
 ```
-pip3 install torch==0.4.1
+pip3 install torch==1.1.0
 pip3 install tensorboardX
 pip3 install opencv-python
 ```
@@ -54,6 +54,7 @@ We also provide with some other neural renderers and agents, you can use them in
 
 [bezierwotrans.pkl](https://drive.google.com/open?id=1XUdti00mPRh1-1iU66Uqg4qyMKk4OL19) --- [actor_notrans.pkl](https://drive.google.com/open?id=1VBtesw2rHmYu2AeJ22XvTCuzuqkY8hZh)
 
+We also provide 百度网盘 source. 链接: https://pan.baidu.com/s/1GELBQCeYojPOBZIwGOKNmA 提取码: aq8n 
 ## Training
 
 ### Datasets
@@ -71,7 +72,8 @@ $ tensorboard --logdir train_log --port=6006
 ### Paint Agent
 After the neural renderer looks good enough, we can begin training the agent.
 ```
-$ python3 baseline/train.py --max_step=40 --debug --batch_size=96
+$ cd baseline
+$ python3 train.py --max_step=40 --debug --batch_size=96
 (A step contains 5 strokes in default.)
 $ tensorboard --logdir train_log --port=6006
 ```
