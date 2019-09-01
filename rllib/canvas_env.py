@@ -36,7 +36,9 @@ class CanvasEnv(gym.Env):
                 "cur_im": spaces.Box(
                     low=0, high=1, shape=(self.width, self.width, 1)
                 ),  # (H, W, C)
-                "obj_status": spaces.Box(low=0, high=1, shape=(self.num_obj * 4,)),
+                "obj_status": spaces.Box(
+                    low=-3, high=3, shape=(self.num_obj, self.num_obj * 4)
+                ),
             }
         )
         self.action_space = spaces.Tuple(
@@ -46,15 +48,16 @@ class CanvasEnv(gym.Env):
         self.target_im = None
         self.obj_status = None
         self.viewer = None
+        self.target_coords = None
 
-    def _render(self, coord):
-        x_0, y_0 = coord
-        # transform = transforms.ToTensor()
+    def _render(self, x0, y0):
         im = Image.new("L", (self.width, self.width))
         draw = ImageDraw.Draw(im)
-        draw.rectangle([x_0, y_0, x_0 + self.obj_w, y_0 + self.obj_w], fill=255)
-        # return transform(im)
-        return np.array(im)
+        draw.rectangle([x0, y0, x0 + self.obj_w, y0 + self.obj_w], fill=255)
+
+        x = np.array(im, dtype=np.float32) / 255.0  # normalize
+        x = np.expand_dims(x, axis=-1)  # (H, W, C=1)
+        return x
 
     def _obs(self):
         return {
@@ -66,32 +69,39 @@ class CanvasEnv(gym.Env):
     def step(self, action):
         """
         Args:
-            action: spaces.Tuple(spaces.Discrete, spaces.Box), 
+            action: list[int, np.array]
         Return:
             obs: target_im (H, W, C), cur_im (H, W, C), field_info (x0, y0)
         """
-        # print(action)
-        x0, y0 = action
-
-        # self.field_info = torch.FloatTensor(
-        #     ((x0, y0, x0 + self.obj_w, y0 + self.obj_w))
-        # )
+        obj_id, coord = action
+        coord *= self.width
+        x0, y0 = coord
         self.obj_status = np.array(
-            [x0, y0, x0 + self.obj_w, y0 + self.obj_w], dtype=np.float32
+            [[x0, y0, (x0 + self.obj_w), (y0 + self.obj_w)]], dtype=np.float32
+        ) / self.width
+        self.cur_im = self._render(x0, y0)
+        reward = -((x0 - self.target_coords[0, 0]) ** 2) + -(
+            (y0 - self.target_coords[0, 1]) ** 2
         )
-        self.cur_im = self._render((x0, y0))
-        reward = -((x0 - self.obj_x) ** 2) + -((y0 - self.obj_y) ** 2)
         done = self.cur_step > self.max_step
         return self._obs(), reward, done, {"episode": {"r": reward}}
 
     def reset(self):
-        x0, y0 = 0, 0  # initial obj coord
-        self.obj_x, self.obj_y = np.random.randint(self.width - self.obj_w, size=2)
-        self.target_im = self._render((self.obj_x, self.obj_y))
-        self.cur_im = self._render((x0, y0))
-        self.obj_status = np.array(
-            [[x0, y0, x0 + self.obj_w, y0 + self.obj_w]], dtype=np.float32
-        )
+        obj_coords = []
+        for _ in range(self.num_obj):
+            _x0, _y0 = np.random.randint(self.width - self.obj_w, size=2)
+            obj_coords.append([_x0, _y0])
+        self.target_coords = np.array(obj_coords, dtype=np.float32)
+
+        obj_coords = []
+        for _ in range(self.num_obj):
+            _x0, _y0 = 0, 0
+            obj_coords.append([_x0, _y0, (_x0 + self.obj_w), (_y0 + self.obj_w)])
+        self.obj_status = np.array(obj_coords, dtype=np.float32) / self.width
+
+        self.target_im = self._render(*(self.target_coords[0]))
+        self.cur_im = self._render(0, 0)
+
         return self._obs()
 
     def render(self, mode="human", close=False):
