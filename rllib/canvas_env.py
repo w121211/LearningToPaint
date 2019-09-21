@@ -37,7 +37,7 @@ class CanvasEnv(gym.Env):
                     low=0, high=1, shape=(self.width, self.width, 1)
                 ),  # (H, W, C)
                 "obj_status": spaces.Box(
-                    low=-3, high=3, shape=(self.num_obj, self.num_obj * 4)
+                    low=-10, high=10, shape=(self.num_obj, self.num_obj * 4)
                 ),
             }
         )
@@ -84,7 +84,8 @@ class CanvasEnv(gym.Env):
             (y0 - self.target_coords[0, 1]) ** 2
         )
         done = self.cur_step > self.max_step
-        return self._obs(), reward, done, {"episode": {"r": reward}}
+        # return self._obs(), reward, done, {"episode": {"r": reward}}
+        return self._obs(), 1, done, {"episode": {"r": reward}}
 
     def reset(self):
         obj_coords = []
@@ -172,12 +173,13 @@ if __name__ == "__main__":
         "PPO",
         stop={"timesteps_total": 10000},
         config={
+            "log_level": "INFO",
+            "num_workers": 1,  # parallelism
+            "num_gpus": 0,
             "env": CanvasEnv,  # or "corridor" if registered above
+            # "env_config": {"corridor_length": 5},
             "model": {"custom_model": "my_model"},
             # "model_config": {},
-            "vf_share_layers": True,
             # "lr": grid_search([1e-2, 1e-4, 1e-6]),  # try different lrs
-            "num_workers": 1,  # parallelism
-            # "env_config": {"corridor_length": 5},
         },
     )
