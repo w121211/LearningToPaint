@@ -3,14 +3,17 @@ import os, subprocess, time, signal
 import numpy as np
 from PIL import Image, ImageDraw
 
+import gym
+from gym import error, spaces
 import ray
 from ray import tune
 from ray.rllib.utils import try_import_tf
 from ray.tune import grid_search
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
-import gym
-from gym import error, spaces
+from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.evaluation.postprocessing import discount
+from ray.rllib.policy.tf_policy_template import build_tf_policy
 
 tf = try_import_tf()
 
@@ -20,7 +23,7 @@ OBJ_WIDTH = 3
 
 class CanvasEnv(gym.Env):
     def __init__(self, config):
-        self.max_step = 5
+        self.max_step = 1
         self.cur_step = 0
         self.width = CANVAS_WIDTH
         self.obj_w = OBJ_WIDTH
@@ -54,7 +57,6 @@ class CanvasEnv(gym.Env):
         im = Image.new("L", (self.width, self.width))
         draw = ImageDraw.Draw(im)
         draw.rectangle([x0, y0, x0 + self.obj_w, y0 + self.obj_w], fill=255)
-
         x = np.array(im, dtype=np.float32) / 255.0  # normalize
         x = np.expand_dims(x, axis=-1)  # (H, W, C=1)
         return x
@@ -74,20 +76,24 @@ class CanvasEnv(gym.Env):
             obs: target_im (H, W, C), cur_im (H, W, C), field_info (x0, y0)
         """
         obj_id, coord = action
-        coord *= self.width
-        x0, y0 = coord
-        self.obj_status = np.array(
-            [[x0, y0, (x0 + self.obj_w), (y0 + self.obj_w)]], dtype=np.float32
-        ) / self.width
-        self.cur_im = self._render(x0, y0)
-        reward = -((x0 - self.target_coords[0, 0]) ** 2) + -(
-            (y0 - self.target_coords[0, 1]) ** 2
-        )
+        # coord *= self.width
+        # x0, y0 = coord
+        # self.obj_status = (
+        #     np.array([[x0, y0, (x0 + self.obj_w), (y0 + self.obj_w)]], dtype=np.float32)
+        #     / self.width
+        # )
+        # self.cur_im = self._render(x0, y0)
+        # reward = -((x0 - self.target_coords[0, 0]) ** 2) + -(
+        #     (y0 - self.target_coords[0, 1]) ** 2
+        # )
+        self.cur_step += 1
         done = self.cur_step > self.max_step
+
         # return self._obs(), reward, done, {"episode": {"r": reward}}
-        return self._obs(), 1, done, {"episode": {"r": reward}}
+        return self._obs(), 1, done, {}
 
     def reset(self):
+        self.cur_step = 0
         obj_coords = []
         for _ in range(self.num_obj):
             _x0, _y0 = np.random.randint(self.width - self.obj_w, size=2)
@@ -150,7 +156,7 @@ class MyModel(TFModelV2):
         self.register_variables(self.model.variables)
 
     def forward(self, input_dict, state, seq_lens):
-        print(input_dict["obs"]["cur_im"])
+        # print(input_dict["obs"]["cur_im"])
         model_out, self._value_out = self.model(
             [
                 input_dict["obs"]["cur_im"],
@@ -164,16 +170,40 @@ class MyModel(TFModelV2):
         return tf.reshape(self._value_out, [-1])
 
 
+def policy_gradient_loss(policy, model, dist_class, train_batch):
+    # print(train_batch)
+    logits, _ = model.from_batch(train_batch)
+    action_dist = dist_class(logits, model)
+    return -tf.reduce_mean(
+        action_dist.logp(train_batch["actions"]) * train_batch["returns"]
+    )
+
+
+def calculate_advantages(policy, sample_batch, other_agent_batches=None, episode=None):
+    # print(sample_batch)
+    sample_batch["returns"] = discount(sample_batch["rewards"], 0.99)
+    return sample_batch
+
+
+MyTFPolicy = build_tf_policy(
+    name="MyTFPolicy", loss_fn=policy_gradient_loss, postprocess_fn=calculate_advantages
+)
+
+MyTrainer = build_trainer(name="MyCustomTrainer", default_policy=MyTFPolicy)
+
+
 if __name__ == "__main__":
     # Can also register the env creator function explicitly with:
     # register_env("canvas", lambda config: CanvasEnv(config))
     ray.init()
     ModelCatalog.register_custom_model("my_model", MyModel)
     tune.run(
-        "PPO",
+        # "PPO",
+        MyTrainer,
         stop={"timesteps_total": 10000},
         config={
-            "log_level": "INFO",
+            # "log_level": "INFO",
+            "log_sys_usage": False,
             "num_workers": 1,  # parallelism
             "num_gpus": 0,
             "env": CanvasEnv,  # or "corridor" if registered above
@@ -181,5 +211,8 @@ if __name__ == "__main__":
             "model": {"custom_model": "my_model"},
             # "model_config": {},
             # "lr": grid_search([1e-2, 1e-4, 1e-6]),  # try different lrs
+            # "vf_share_layers": True,
+            # "env_config": {"corridor_length": 5},
+            "train_batch_size": 200,
         },
     )

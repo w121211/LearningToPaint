@@ -37,7 +37,8 @@ class SimpleCorridor(gym.Env):
     def __init__(self, config):
         self.end_pos = config["corridor_length"]
         self.cur_pos = 0
-        self.action_space = spaces.Discrete(2)
+        # self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Tuple([spaces.Discrete(2), spaces.Discrete(4)])
         # self.observation_space = Box(0.0, self.end_pos, shape=(1,), dtype=np.float32)
         self.observation_space = spaces.Dict(
             {
@@ -59,10 +60,10 @@ class SimpleCorridor(gym.Env):
             done
             log
         """
-        assert action in [0, 1], action
-        if action == 0 and self.cur_pos > 0:
+        # assert action in [0, 1], action
+        if action[0] == 0 and self.cur_pos > 0:
             self.cur_pos -= 1
-        elif action == 1:
+        elif action[0] == 1:
             self.cur_pos += 1
         done = self.cur_pos >= self.end_pos
         return {"a": [self.cur_pos], "b": [self.cur_pos]}, 1 if done else 0, done, {}
@@ -90,7 +91,6 @@ class CustomModel(TFModelV2):
         self.register_variables(self.model.variables)
 
     def forward(self, input_dict, state, seq_lens):
-        print(input_dict["obs"]["a"])
         model_out, self._value_out = self.model(
             [input_dict["obs"]["a"], input_dict["obs"]["b"]]
         )
@@ -114,7 +114,7 @@ if __name__ == "__main__":
             "env": SimpleCorridor,  # or "corridor" if registered above
             "model": {"custom_model": "my_model"},
             "vf_share_layers": True,
-            "lr": grid_search([1e-2, 1e-4, 1e-6]),  # try different lrs
+            # "lr": grid_search([1e-2, 1e-4, 1e-6]),  # try different lrs
             # "lr": grid_search([1e-2, 1e-4, 1e-6]),  # try different lrs
             "num_workers": 1,  # parallelism
             "env_config": {"corridor_length": 5},
