@@ -1,6 +1,6 @@
 {
     "python.formatting.provider": "black",
-    "python.pythonPath": "/usr/local/bin/python",
+    "python.pythonPath": "/opt/conda/bin/python",
     // workaround for vscode remote docker: switch back from sh to bash
     "terminal.integrated.shell.linux": "/bin/bash",
     "editor.acceptSuggestionOnEnter": "off"
